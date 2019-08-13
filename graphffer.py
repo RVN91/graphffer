@@ -1,6 +1,14 @@
 """
-Controls the mouse and left clicks
-at specified x, y coordiantes.
+Grabs data from images of graphs on screen.
+
+Images must have linearly scaled x- and y-
+axes.
+
+TODO:
+    *Let user pick color of plotted data
+    *Implement solution for bar charts
+    *Make simple GUI?
+    *Make EXE (probably not possible?)
 
 Author: Rasmus Nielsen
 """
@@ -10,6 +18,7 @@ import pyautogui
 from pynput.mouse import Listener
 from PIL import Image
 import matplotlib.pyplot as plt
+import time
 import imageio
 import pandas as pd
 import numpy as np
@@ -224,12 +233,16 @@ def main():
     x_button, y_button, x1, y1, x2, y2 = init_omnic_variables()
     
     for n, compound_name in enumerate(compound_names["compound"].tolist()):
+        # Insert pause for screen refresh rate
+        # to keep up!
+        time.sleep(0.1)
+
         # Take screenshot
         screenshot_file_name = save_screenshot(n + 1)
         
         # Clip screenshot
         graph = clip_screenshot(screenshot_file_name, x1, y1, x2, y2, n + 1)
-
+        
         # Load the graph
         img = imageio.imread(graph)
             
@@ -262,6 +275,12 @@ def main():
         for y in y_red: # 1 - remap() due to y-axis is calculated in reverse...
             y_values.append(1 - remap( y, pixel_min, pixel_max, absorbance_min, absorbance_max ))
         
+        # Sort x and y
+        x_values = np.array(x_values); y_values = np.array(y_values)
+        x_values_sorted_idx = np.array(x_values).argsort()
+        x_values = x_values[x_values_sorted_idx]
+        y_values = y_values[x_values_sorted_idx]
+        
         """
         # Interpolate new x and y
         f = interp1d(x_values, y_values)
@@ -273,17 +292,16 @@ def main():
             plt.scatter(x_red, y_red, s = 0.5)
             plt.title("Detected pixel values")
             plt.gca().invert_yaxis()
-            plt.gcf().set_size_inches(6, 6)
+            plt.gcf().set_size_inches(12, 3)
             plt.show()
 
             # Plot of generated spectra
-            plt.plot(x_values, y_values)
-            plt.gca().invert_yaxis()
+            plt.scatter(x_values, y_values, s = 1)
             plt.gca().invert_xaxis()
             plt.title("Transformed pixel values to spectra thingy")
             plt.ylabel("Absorbance")
             plt.xlabel("Wavenumbers [$cm^{-1}$]")
-            plt.gcf().set_size_inches(6, 6)
+            plt.gcf().set_size_inches(12, 3)
             plt.show()
 
         d = {"wavenumbers": x_values,
@@ -292,14 +310,14 @@ def main():
         
         df.to_csv("spectra_csv/index_{0}.csv".format(n + 1))
         
-        # Witch to next spectra
+        # Switch to next spectra
         next_spectra(x_button, y_button)
         
         if DEBUG:
             break
     
     print("Done!")
-    print("Ripped {0} spectras from database!".format(n + 1))
+    print("Ripped {0} spectra(s)!".format(n + 1))
 
 if __name__ == "__main__":
     main()
